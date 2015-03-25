@@ -1,0 +1,37 @@
+/* CSS file */
+.canvas {
+	padding-bottom: 0;
+	padding-top: 0;
+	padding-left: 0;
+	padding-right: 0;
+	background-color: "black";
+}
+
+.topBar {
+	background-image: Embed(source="assets/images/bar.png");
+	background-size: "100%";
+	padding-bottom: 15;
+	padding-top: 15;
+	padding-left: 15;
+	padding-right: 15;
+	vertical-align: middle;
+	left: 0;
+}
+
+.menuButton {
+	borderStyle: applicationControlBar;
+	fillColors: #333333, #000000;
+	fillAlphas: 0.7, 0.7;
+	highlightAlphas: 0, 0;
+	
+	corner-radius: 0;
+	text-align: right;
+	font-size: 12;
+	padding-top: 5;
+	padding-bottom: 5;
+	border-thickness: 1;
+	roll-over-color: #BBBBBB;
+	border-color: #333333;
+	text-roll-over-color: #666666;
+	color: #BBBBBB;
+}

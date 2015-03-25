@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Box xmlns:mx="http://www.adobe.com/2006/mxml" direction="vertical"
+	 xmlns:myComp="view.*" xmlns:containers="com.dougmccune.containers.*">
+	<mx:Metadata>
+		[Event(name="goCategory", type="events.GoToCategoryEvent")]
+		[Event(name="showMovie", type="events.MovieEvent")]
+    </mx:Metadata>
+    
+	<mx:Script>
+		<![CDATA[		
+			// Imports
+			import model.Category;		
+			import mx.containers.Panel;
+			import model.Movie;		
+			import mx.events.FlexEvent;
+			import mx.collections.ArrayCollection;
+			import events.GoToCategoryEvent;
+			import events.MovieEvent;
+			
+			// Set fields
+			[Bindable] public var listMovies:ArrayCollection;
+			[Bindable] public var listTitle:String;
+			
+			// Set search option
+			public var isSearch:Boolean = false;
+			
+			// Clear errors if any
+			private function clearErrors():void {
+				if(errorMessage != null && errorMessage.numChildren)
+					errorMessage.removeAllChildren();
+			}
+			
+			// Check the list
+			private function checkList():void {				
+				// Check for errors
+				if(listMovies.length == 0) {
+					// Create new panel with text
+					var panel:Panel = new Panel();
+					var text:Text = new Text();
+					text.width = 988;
+					
+					// Set text depending on the mode
+					if(isSearch) {
+						panel.title = "No results found";		
+						text.text = "There are no movies in your collection which specifies to your search query.";									
+					} else {
+						panel.title = "No movies in this section";
+						text.text = "No movies has been assigned to this section yet.";				
+					}
+					
+					// Add error to page
+					panel.addChild(text);
+					errorMessage.addChild(panel);
+				}
+			}
+			
+			// Go to a clicked category
+			private function goCategory(event:TextEvent):void {
+                // Create a category
+                var tempCategory:Category = new Category(event.text);
+                
+                // Dispatch the event
+                dispatchEvent(new GoToCategoryEvent(GoToCategoryEvent.EVENT_GO_CATEGORY, tempCategory));
+            }
+            
+			private function getMovie(movie:Movie):void {
+				// Dispatch the event
+                dispatchEvent(new MovieEvent(MovieEvent.EVENT_SHOW_MOVIE, movie));
+			}
+		]]>
+	</mx:Script>
+	<mx:Box direction="horizontal">
+		<mx:Text text="{listTitle}" />
+	</mx:Box>
+	<mx:Box direction="vertical">
+		<mx:VBox id="box" verticalGap="0" height="600" width="1017">         
+            <containers:CoverFlowContainer id="coverflow" width="100%" height="100%" 
+                horizontalGap="40" borderStyle="inset" backgroundColor="0x000000"
+                segments="6" reflectionEnabled="true">
+                    
+                <mx:Repeater id="repMovies" dataProvider="{listMovies}" repeatStart="clearErrors();" repeatEnd="checkList();">
+					<mx:Panel title="{repMovies.currentItem.title}" click="getMovie(event.currentTarget.getRepeaterItem());" 
+						useHandCursor="true" buttonMode="true" width="220" height="340" cacheAsBitmap="true">
+						<mx:Image source="{repMovies.currentItem.cover}" width="200" height="300" maintainAspectRatio="false" />					
+					</mx:Panel>
+			    </mx:Repeater>
+   
+            </containers:CoverFlowContainer>
+            
+            <mx:HScrollBar id="scrollbar" width="100%" pageSize="1" maxScrollPosition="{listMovies.length - 1}"
+                scrollPosition="{coverflow.selectedIndex}" 
+                scroll="coverflow.selectedIndex = Math.round(scrollbar.scrollPosition)" />            
+        </mx:VBox>
+	    <mx:Box id="errorMessage"> 
+	    		
+	    </mx:Box>
+	</mx:Box> 
+</mx:Box>

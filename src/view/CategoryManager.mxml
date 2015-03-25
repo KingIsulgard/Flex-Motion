@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow xmlns:mx="http://www.adobe.com/2006/mxml" 
+    title="Movie settings" showCloseButton="true" close="PopUpManager.removePopUp(this);" 
+    borderAlpha="0.75" xmlns:myComp="view.*">
+    
+	<mx:Script>
+		<![CDATA[
+			// Imports
+			import mx.managers.PopUpManager;
+			import mx.collections.ArrayCollection;
+			import model.Movie;
+			import model.Category;			
+			import mx.events.FlexEvent;
+			
+			// Set fields
+			[Bindable] public var selectedMovie:Movie;
+			public var categories:ArrayCollection;
+			[Bindable] public var addCategories:ArrayCollection;
+			
+			public function updateAddableCategories():void {
+				addCategories = new ArrayCollection();
+				
+				for each(var category:Category in categories) {
+					if(!selectedMovie.hasCategory(category)) {
+						addCategories.addItem(category);
+					}
+				}
+			}
+			
+			private function categoryLabel(category:Category):String {
+				return category.name;
+			}
+			
+			private function addCategory():void {
+				if(listAllCategories.selectedItem != null) {
+					// Get the category and add it to the movie
+					var tempCategory:Category = Category(listAllCategories.selectedItem);
+					selectedMovie.addCategory(tempCategory);
+					
+					// Add the movie to the category
+					tempCategory.addMovie(selectedMovie);
+					
+					// Update the list
+					updateAddableCategories();
+					
+					// Dispatch event
+					dispatchEvent(new Event("updateCategories"));
+					
+					// Set button
+					if(addCategories.length == 0) {
+						addButton.enabled = false;
+					}
+				}
+			}
+			
+			private function removeCategory():void {
+				if(listMovieCategories.selectedItem != null) {					
+					// Get the category and add it to the movie
+					var tempCategory:Category = Category(listMovieCategories.selectedItem);
+					selectedMovie.removeCategory(tempCategory);
+					
+					// Add the movie to the category
+					tempCategory.removeMovie(selectedMovie);
+					
+					// Update the list
+					updateAddableCategories();
+					
+					// Dispatch event
+					dispatchEvent(new Event("updateCategories"));
+					
+					// Set button
+					if(selectedMovie.categories.length == 0) {
+						removeButton.enabled = false;
+					}
+				}
+			}
+			
+		]]>
+	</mx:Script>
+	<mx:Box direction="horizontal">
+		<mx:Panel title="Movie">
+			<mx:List id="listMovieCategories" width="150" height="250" change="removeButton.enabled = true;" 
+				dataProvider="{selectedMovie.categories}" labelFunction="categoryLabel" />	
+		</mx:Panel>
+        <mx:Box direction="vertical">
+        	<mx:Button id="addButton" label="&lt;" enabled="false" click="addCategory();" />
+        	<mx:Button id="removeButton" label="&gt;" enabled="false" click="removeCategory();" />
+        </mx:Box>
+        <mx:Panel title="Categories">
+	        <mx:List id="listAllCategories" width="150" height="250" change="addButton.enabled = true;" 
+	        	dataProvider="{addCategories}" labelFunction="categoryLabel" />	
+        </mx:Panel>   
+	</mx:Box>	
+</mx:TitleWindow>

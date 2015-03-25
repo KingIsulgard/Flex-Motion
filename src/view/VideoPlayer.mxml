@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow  xmlns:mx="http://www.adobe.com/2006/mxml" xmlns:controls="com.fxcomponents.controls.*" 
+    backgroundColor="#444444" themeColor="#628CAF" width="520" height="420" showCloseButton="true" close="player.close(); PopUpManager.removePopUp(this);"> 
+    <mx:Script>
+        <![CDATA[
+        	// Imports
+        	import mx.managers.PopUpManager;
+        	
+            [Bindable] public var source:String;   
+       	]]>
+    </mx:Script>
+   <controls:FXVideo id="player" width="480" height="360" source="{source}" autoPlay="false" bufferTime="10" /> 
+</mx:TitleWindow>

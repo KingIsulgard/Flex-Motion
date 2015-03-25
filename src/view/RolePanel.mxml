@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Box xmlns:mx="http://www.adobe.com/2006/mxml" xmlns:myComp="view.*">    
+	<mx:Script>
+		<![CDATA[
+			// Imports
+			import model.*;		
+			import mx.events.FlexEvent;
+			import mx.collections.ArrayCollection;
+			import mx.controls.Alert;
+			
+			// The movie
+			[Bindable] public var movie:Movie;
+			
+			// Set a boolean to keep track of the form state
+			[Bindable] private var formIsNotReady:Boolean = true;
+			
+			// Create a writer and reset the form
+            private function addRole():void {
+            	if(roleName.text != "" && roleName.text != "Role name" && actorName.text != "" && actorName.text != "Actor name") {
+	                // Create a role
+	                var tempPerson:Person = new Person(actorName.text);
+	                var tempActor:Actor = new Actor(tempPerson);
+	                var tempRole:Role = new Role(roleName.text, tempActor, movie);
+	                tempPerson.actor = tempActor;
+	                tempActor.addRole(tempRole);
+	                
+	                // Clear all input fields.
+	                roleName.text = "";
+	                onFocusOutRole();
+	                actorName.text = "";
+	                onFocusOutActor();
+	                
+	                // Add the role if it isn't in the list yet
+					if(!movie.hasRole(tempRole)) {
+						tempRole.movie = movie;
+						movie.addRole(tempRole);	
+					} else {
+						Alert.show("This movie already has a role with that name!");
+					}
+	                
+	                // Set form to empty again
+	                formIsNotReady = true;
+	                
+	                // Set the focus on the first field
+	                focusManager.setFocus(roleName);
+            	}
+            }
+                    
+			// Remove roles
+			private function removeRoles():void {
+				var selected:Array = roles.selectedItems;
+				for each(var role:Role in selected){
+					movie.removeRole(role);	
+				}				
+			}
+			
+			// Validate the form
+            private function validateForm(event:Event):void {                    
+				// Check input field
+				if(roleName.text == "" || roleName.text == "Role name" || actorName.text == "" || actorName.text == "Actor name")
+					formIsNotReady = true;
+				else
+					formIsNotReady = false;
+            }
+            
+            // Clear field if information tag
+			private function onFocusInRole():void {
+				if(roleName.text == "Role name")
+					roleName.text = "";
+			}
+			
+			// Set information tag if field is empty
+			private function onFocusOutRole():void {
+				if(roleName.text == "")
+					roleName.text = "Role name";
+			}
+			
+			// Clear field if information tag
+			private function onFocusInActor():void {
+				if(actorName.text == "Actor name")
+					actorName.text = "";
+			}
+			
+			// Set information tag if field is empty
+			private function onFocusOutActor():void {
+				if(actorName.text == "")
+					actorName.text = "Actor name";
+			}
+			
+		]]>
+	</mx:Script>
+	<mx:Panel title="Roles" layout="vertical">
+		<mx:DataGrid rowHeight="50" verticalAlign="middle" editable="true" dataProvider="{movie.roles}" 
+			id="roles" width="775" height="250" allowMultipleSelection="true">
+			<mx:columns>
+				<mx:DataGridColumn headerText="Photo" dataField="personPicture" width="50" textAlign="center">
+					<mx:itemRenderer>
+						<mx:Component>
+							<mx:Box width="50" height="50" verticalAlign="middle" horizontalAlign="center">
+								<mx:Image source="{data.personPicture}" width="40" height="40" maintainAspectRatio="false" />
+							</mx:Box>					
+						</mx:Component>
+					</mx:itemRenderer>
+				</mx:DataGridColumn>
+				<mx:DataGridColumn headerText="Role name" dataField="name" />
+				<mx:DataGridColumn headerText="Actor name" dataField="actorName" />
+			</mx:columns>
+		</mx:DataGrid>
+		<mx:Box direction="horizontal">
+			<mx:TextInput id="roleName" text="Role name" width="177" focusIn="onFocusInRole();" 
+					focusOut="onFocusOutRole();" change="validateForm(event);" enter="focusManager.setFocus(actorName);" />
+			<mx:TextInput id="actorName" text="Actor name" width="177" focusIn="onFocusInActor();" 
+					focusOut="onFocusOutActor();" change="validateForm(event);" enter="addRole();" />	
+			<mx:Button label="Add role" enabled="{!formIsNotReady}" click="addRole();" />
+			<mx:Button label="Remove selected" click="removeRoles();" />
+		</mx:Box>
+	</mx:Panel>
+</mx:Box>

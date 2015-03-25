@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Box xmlns:mx="http://www.adobe.com/2006/mxml" xmlns:myComp="view.*">    
+	<mx:Script>
+		<![CDATA[
+			// Imports
+			import model.Director;
+			import model.Person;
+			import model.Movie;			
+			import mx.events.FlexEvent;
+			import mx.controls.Alert;
+			
+			// The movie
+			[Bindable] public var movie:Movie;
+			
+			// Set a boolean to keep track of the form state
+			[Bindable] private var formIsEmpty:Boolean = true;
+			
+			// Validate the form
+            private function validateForm(event:Event):void {                    
+				// Check input field
+				if(directorName.text == "" || directorName.text == "Director name")
+					formIsEmpty = true;
+				else
+					formIsEmpty = false;
+            }
+			
+			private function addDirector():void {
+				if(directorName.text != "" && directorName.text != "Director name") {
+					// Create a director
+	                var tempPerson:Person = new Person(directorName.text);
+	                var tempDirector:Director = new Director(tempPerson);
+	                tempPerson.director = tempDirector;
+	                
+	                // Add the director if it isn't in the list yet
+					if(!movie.hasDirector(tempDirector)) {
+						tempDirector.addMovie(movie);
+						movie.addDirector(tempDirector);	
+					} else {
+						Alert.show("This movie already has a director with that name!");
+					}
+					
+	                // Clear all input fields.
+	                directorName.text = "";
+	                onFocusOut();
+	                  
+	                // Set form to empty again
+	                formIsEmpty = true;
+	                
+	                // Set the focus on the first field
+	                focusManager.setFocus(directorName); 
+	   			}			
+			}
+			
+			// Remove selected directors
+			private function removeDirectors():void {
+				var selected:Array = directors.selectedItems;
+				for each(var director:Director in selected){
+					movie.removeDirector(director);	
+				}				
+			}
+			
+			// Clear field if information tag
+			private function onFocusIn():void {
+				if(directorName.text == "Director name")
+					directorName.text = "";
+			}
+			
+			// Set information tag if field is empty
+			private function onFocusOut():void {
+				if(directorName.text == "")
+					directorName.text = "Director name";
+			}
+			
+		]]>
+	</mx:Script>
+	<mx:Panel title="Directors" layout="vertical"> 
+		<mx:DataGrid editable="true" dataProvider="{movie.directors}" id="directors" width="374" height="160" 
+			rowHeight="50" verticalAlign="middle" allowMultipleSelection="true">
+			<mx:columns>
+				<mx:DataGridColumn headerText="Photo" dataField="personPicture" width="50">
+					<mx:itemRenderer>
+						<mx:Component>
+							<mx:Box width="50" height="50" verticalAlign="middle" horizontalAlign="center">
+								<mx:Image source="{data.personPicture}" width="40" height="40" maintainAspectRatio="false" />
+							</mx:Box>					
+						</mx:Component>
+					</mx:itemRenderer>
+				</mx:DataGridColumn>
+				<mx:DataGridColumn headerText="Director name" dataField="directorName" />
+			</mx:columns>
+		</mx:DataGrid>
+		<mx:Box direction="horizontal">
+			<mx:TextInput id="directorName" text="Director name" width="185" focusIn="onFocusIn();" 
+				focusOut="onFocusOut();" change="validateForm(event);" enter="addDirector();" />	
+			<mx:Button label="Add Director" enabled="{!formIsEmpty}" click="addDirector();" width="100" />
+			<mx:Button label="Remove" click="removeDirectors();" />
+		</mx:Box>
+	</mx:Panel>
+</mx:Box>

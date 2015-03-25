@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:WindowedApplication xmlns:mx="http://www.adobe.com/2006/mxml" layout="vertical" styleName="canvas"  
+	creationComplete="onCreationComplete(event)" xmlns:myComp="view.*" verticalScrollPolicy="off">
+	<mx:Style source="Motion.css"/>
+	<mx:Script>
+		<![CDATA[
+			import mx.core.Application;
+			import mx.containers.Canvas;
+			import mx.core.Window;
+			/* Toegebrachte wijzigingen na afgave
+				- Gebruik van filters
+				Ipv de lijsten te veranderen, gebruik maken van filters op de orginele lijst
+				Vroeger ging bij elke andere knop een nieuwe lijst gemaakt worden en werd deze doorgegeven
+				Nu blijft de lijst overal hetzelfde en wordt er gebruik gemaakt van filters, dit is een
+				verhoging van de performantie. Ook wordt de sortfield nu maar 1 keer aangemaakt 
+				en hergebruikt.
+				
+				- Het toevoegen van een searchbar
+				Bij het enteren door de gebruiker wordt er in de gehele collectie gezocht naar
+				films die de searchstring in hun title hebben (not case-sensitive).
+				Als de searchstring leeg is worden gewoon alle films getoond.
+				
+				- De paginas maken nu gebruik van paging
+				Er worden maximum x items per pagina getoond, met een knop kan er naar de vorige of
+				volgende pagina gegaan worden. Het aantal items hangt af van de view.
+				De coverflow toont gewoon alle films (dus geen paging daar).
+				
+				- Delete optie bij writers en directors, blijkbaar was ik dit vergeten.
+				
+				- Intuitiever maken van de interface
+				De inputvelden van de movie settings zijn intuitiever gemaakt. De informatie 
+				die er in verwacht wordt wordt er in omschreven. Ook wordt er gebruik gemaakt 
+				van focusIn en focusOut om deze informatie automatisch te verwijderen en te tonen.
+				
+				- Bugfixes 
+				Bugfix van de movieplayer (geluid bleef doorspelen als popup gesloten werd), ook wordt nu
+				het aantal views aangepast in het formulier als je op "play" klikt.
+				
+				- Handigere formulieren
+				In formulieren heeft het indrukken van de enter toets hetzelfde gevolg als
+				de tab toets (volgende field). Bij het laatste veld wordt een submit aangeroepen.
+				
+				- Hier en daar performantieverbeteringen uitgevoerd
+				
+				- Select random movie optie
+			*/
+			
+			// Imports
+			import model.*;
+			import mx.events.*;
+			import mx.collections.*;
+			import events.*;
+			import mx.managers.PopUpManager;
+            import mx.containers.TitleWindow;
+            import view.MoviePanel;
+			
+			// Set fields
+			[Bindable] private var movieManager:MovieManager = new MovieManager();
+			
+			// Popup for movies
+			private var moviePopup:MoviePanel;
+			
+			private function onCreationComplete(event:FlexEvent):void {
+				// Set standard list
+				changeList("All movies");
+			}
+			
+			private function getCategory(event:Event):void {
+				setCategory(event.currentTarget.selectedItem);
+			}
+			
+			private function setCategory(category:Category):void {
+				// Set category to filter to
+				movieManager.filteringCategory = category;
+				
+				// Set startingindex to zero again
+				resetRepeaters();
+				
+				// Set frame
+				setSearch(false);
+				setFrame(movieManager.filterCategory, movieManager.sortMovieByName, "Category: " + category.name);
+			}
+			
+			private function search():void {
+				if(searchText.text != "") {
+					// Set category to filter to
+					movieManager.filteringString = searchText.text;
+					
+					// Set frame
+					setSearch(true);
+					setFrame(movieManager.filterSearch, movieManager.sortMovieByName, "Searching for '" + searchText.text + "'");
+					
+					// Clear search
+					searchText.text = "";
+				} else {
+					// Set standard list
+					setFrame(null, movieManager.sortMovieByName, "All movies");
+				}
+			}
+			
+			private function setFrame(filterFunction:Function, sortFunction:Sort, title:String):void {
+				// Set titles
+				movieList.listTitle = title;
+				movieGrid.listTitle = title;
+				movieCoverFlow.listTitle = title;
+				
+				// Reset indices of repeaters
+				resetRepeaters();
+				
+				// Set filter
+				movieManager.movies.filterFunction = filterFunction;
+				
+				// Set sort
+				movieManager.movies.sort = sortFunction;
+				
+				// Refresh list
+				movieManager.movies.refresh();
+			}
+			
+			private function setSearch(isSearch:Boolean):void {
+				// Set titles
+				movieList.isSearch = isSearch;
+				movieGrid.isSearch = isSearch;
+				movieCoverFlow.isSearch = isSearch;
+			}
+			
+			private function changeList(listType:String):void {
+				switch(listType) {
+					case 	"uncategorized":				
+						// Set frame
+						setSearch(false);
+						setFrame(movieManager.filterUncategorized, movieManager.sortMovieByName, "Uncategorized movies");
+					break;
+					case 	"unwatched":
+						// Set frame
+						setSearch(false);
+						setFrame(movieManager.filterUnwatched, movieManager.sortMovieByName, "Unwatched movies");
+					break;
+					case 	"popular":
+						// Set frame
+						setSearch(false);
+						setFrame(null, movieManager.sortMovieByViews, "Most seen movies");
+					break;
+					default:
+						// Set frame
+						setSearch(false);
+						setFrame(null, movieManager.sortMovieByName, "All movies");
+				}
+			}
+			
+			// Reset indices
+			private function resetRepeaters():void {
+				// Set indices to zero
+				if(movieList.repMovies != null)
+					movieList.repMovies.startingIndex = 0;
+				if(movieGrid.repMovies != null)
+					movieGrid.repMovies.startingIndex = 0;
+			}
+			
+			private function onGoCategory(event:GoToCategoryEvent):void {
+				setCategory(event.category);
+			}
+			
+			private function onCloseSettings(event:Event):void {
+				// Update lists
+				movieManager.movies.refresh();
+				
+				// Set popup nothing
+				moviePopup = null;
+			}
+			
+			private function onRemoveMovie(event:MovieEvent):void {
+				// Remove the movie
+				movieManager.removeMovie(event.movie);
+			}
+			
+			private function addMovie():void {
+				// Create a new movie
+				var tempMovie:Movie = new Movie("");				
+				
+				// Check if there is another new movie that hasn't been set yet
+				if(movieManager.hasMovie(tempMovie))
+					tempMovie = movieManager.getEqualMovie(tempMovie);
+				else	// Else add it
+					movieManager.addMovie(tempMovie);
+				
+				// Create an event
+				var tempEvent:MovieEvent = new MovieEvent(MovieEvent.EVENT_SHOW_MOVIE, tempMovie);
+				
+				// Force popup to close if there is one
+				if(moviePopup != null)
+					PopUpManager.removePopUp(moviePopup);
+					
+				// Show the new movie
+				onShowMovie(tempEvent);
+			}
+			
+			private function randomMovie():void {
+				// Get a random movie
+				var tempMovie:Movie = movieManager.getRandomMovie();				
+				
+				// Create an event
+				var tempEvent:MovieEvent = new MovieEvent(MovieEvent.EVENT_SHOW_MOVIE, tempMovie);
+				
+				// Force popup to close if there is one
+				if(moviePopup != null)
+					PopUpManager.removePopUp(moviePopup);
+					
+				// Show the new movie
+				onShowMovie(tempEvent);
+			}
+			
+			private function onShowMovie(event:MovieEvent):void {
+				// Create a popup
+				moviePopup = PopUpManager.createPopUp(this, MoviePanel, true) as MoviePanel;
+                
+                // Add events
+                moviePopup.addEventListener(GoToCategoryEvent.EVENT_GO_CATEGORY, onGoCategory);
+                moviePopup.addEventListener(MovieEvent.EVENT_REMOVE_MOVIE, onRemoveMovie);
+                moviePopup.addEventListener("randomMovie", onRandomMovie);
+                moviePopup.addEventListener(CloseEvent.CLOSE, onCloseSettings);
+				
+                // Center popup
+                PopUpManager.centerPopUp(moviePopup);
+                
+                // Make undraggable
+               	moviePopup.isPopUp = false;
+                
+                // Set information
+                moviePopup.setMovie(event.movie);
+                moviePopup.categories = movieManager.categories;
+			}
+			
+			private function onRandomMovie(event:Event):void {
+				randomMovie();
+			}
+			
+		]]>
+	</mx:Script>
+	<mx:Box direction="horizontal" left="0" styleName="topBar" width="100%">
+		<mx:Box width="30%" horizontalAlign="left">
+			<mx:Image source="assets/images/Motion.png" id="logo" height="50" />
+		</mx:Box>
+		<mx:Box width="70%" horizontalAlign="right" direction="horizontal">
+			<mx:ApplicationControlBar>
+		        <mx:Label text="Search" fontWeight="bold" color="0xffffff" />
+		        <mx:TextInput width="250" maxWidth="200" id="searchText" enter="search();" />
+		    </mx:ApplicationControlBar>
+		    <mx:Spacer width="300" />
+			<mx:ToggleButtonBar id="buttonBar" dataProvider="{selectView}" selectedIndex="0" />
+		</mx:Box>	
+	</mx:Box>
+	<mx:Box direction="horizontal">
+		<mx:Box direction="vertical">
+			<mx:Button label="All movies" click="changeList('all');" width="200" styleName="menuButton" />
+			<mx:ComboBox id="selectedCategory" labelField="name" dataProvider="{movieManager.categories}" 
+				width="200" change="getCategory(event)" styleName="menuButton" />
+			<mx:Button label="Uncategorized" click="changeList('uncategorized');" width="200" styleName="menuButton" />
+			<mx:Button label="Unwatched" click="changeList('unwatched');" width="200" styleName="menuButton" />
+			<mx:Button label="Most seen" click="changeList('popular');" width="200" styleName="menuButton" />
+			<mx:Button label="Random movie" click="randomMovie();" width="200" styleName="menuButton" />
+			<mx:Button label="New movie" click="addMovie();" width="200" styleName="menuButton" />
+		</mx:Box>
+		<mx:ViewStack id="selectView" resizeToContent="true" height="{Application.application.height - 120}" selectedIndex="0">
+			<myComp:ListView id="movieList" listMovies="{movieManager.movies}" goCategory="onGoCategory(event);" showMovie="onShowMovie(event);" icon="@Embed('assets/images/icons/listview.png')" />
+			<myComp:GridView id="movieGrid" listMovies="{movieManager.movies}" goCategory="onGoCategory(event);" showMovie="onShowMovie(event);" icon="@Embed('assets/images/icons/gridview.png')" />
+			<myComp:CoverFlowView id="movieCoverFlow" listMovies="{movieManager.movies}" goCategory="onGoCategory(event);" showMovie="onShowMovie(event);" icon="@Embed('assets/images/icons/coverflow.png')" />
+		</mx:ViewStack>
+	</mx:Box>
+</mx:WindowedApplication>

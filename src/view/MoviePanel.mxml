@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow xmlns:mx="http://www.adobe.com/2006/mxml" 
+    title="Movie settings" showCloseButton="true" close="PopUpManager.removePopUp(this);" borderAlpha="0.75" 
+    xmlns:myComp="view.*" height="680" width="839">
+	
+	<mx:Metadata>
+		[Event(name="goCategory", type="events.GoToCategoryEvent")]
+		[Event(name="removeMovie", type="events.MovieEvent")]
+    </mx:Metadata>
+    
+	<mx:Script>
+		<![CDATA[			
+			// Imports
+			import mx.managers.PopUpManager;
+			import mx.collections.ArrayCollection;
+			import model.Writer;
+			import model.Movie;
+			import model.Category;			
+			import mx.events.*;
+			import mx.managers.DragManager;
+			import mx.controls.Alert;
+			import events.*;
+			import view.VideoPlayer;
+			import view.CategoryManager;
+			import mx.core.IFlexDisplayObject;
+			import mx.effects.*;
+			
+			// Set fields
+			[Bindable] public var selectedMovie:Movie;
+			[Bindable] public var categories:ArrayCollection;
+			
+			// Set values and pass them on
+			public function setMovie(movie:Movie):void {
+				// Pass on the data
+				selectedMovie = movie;
+				writerPanel.movie = selectedMovie;
+				directorPanel.movie = selectedMovie;
+				rolePanel.movie = selectedMovie;
+				
+				// Set information tags if empty fields
+				if(movie.title == "")
+					movieTitle.text = "Movie title";
+				else
+					movieTitle.text = movie.title;
+					
+				if(movie.description == "" || movie.description == null)
+					movieDescription.text = "Write a description";
+				else
+					movieDescription.text = movie.description;
+					
+				if(movie.source == null)
+					movieSource.text = "Source: No movie file has been specified yet";
+			}
+			
+			private function setCover(url:String):void {
+				selectedMovie.cover = url;
+			}	
+			
+			private function setSource(url:String):void {
+				selectedMovie.source = url;
+			}
+			
+			// Go to a clicked category
+			private function goCategory(event:TextEvent):void {
+                // Create a category
+                var tempCategory:Category = new Category(event.text);
+                
+                // Dispatch the event
+                dispatchEvent(new GoToCategoryEvent(GoToCategoryEvent.EVENT_GO_CATEGORY, tempCategory));
+                
+                // Close this window
+                PopUpManager.removePopUp(this);
+            }
+            
+            // Remove the movie
+            private function removeMovie():void {
+            	// Remove the movie
+            	dispatchEvent(new MovieEvent(MovieEvent.EVENT_REMOVE_MOVIE, selectedMovie));
+            	
+            	// Close this window
+                PopUpManager.removePopUp(this);
+            }
+            
+            private function playMovie():void {
+            	// Add the amount of seen
+            	selectedMovie.viewed++;
+            	
+            	// Refresh string on form
+            	movieViews.text = selectedMovie.viewsString;
+            	
+            	// Play the movie
+            	createVideoPlayer();
+            }
+            
+            private function createVideoPlayer():void {
+            	if(selectedMovie.source == "") {
+            		Alert.show("No source specified to view!");
+            	} else {
+            		// Create a popup
+					var showMovie:VideoPlayer = PopUpManager.createPopUp(this, VideoPlayer, true) as VideoPlayer;
+					
+	                // Center popup
+	                PopUpManager.centerPopUp(showMovie);
+	                
+	                // Make undraggable
+	               	showMovie.isPopUp = false;
+	                
+	                // Set information
+	                showMovie.title = "Now playing - " + selectedMovie.title;
+	                showMovie.source = selectedMovie.source;
+            	}			
+			}
+			
+			private function manageCategories():void {
+            	// Create a popup
+				var manager:CategoryManager = PopUpManager.createPopUp(this, CategoryManager, true) as CategoryManager;
+				
+				// Add eventlisteners
+				manager.addEventListener("updateCategories", onUpdateCategories);
+				
+                // Center popup
+                PopUpManager.centerPopUp(manager);
+                
+                // Make undraggable
+               	manager.isPopUp = false;
+                
+                // Set information
+                manager.title = "Manage categories of " + selectedMovie.title;
+                manager.selectedMovie = selectedMovie;
+                manager.categories = categories;
+                manager.updateAddableCategories();
+			}
+			
+			private function onUpdateCategories(event:Event):void {
+				movieCategories.htmlText = selectedMovie.categoryList;
+			}
+			
+			// Clear field if information tag
+			private function onFocusInTitle():void {
+				if(movieTitle.text == "Movie title")
+					movieTitle.text = "";
+			}
+			
+			// Set information tag if field is empty
+			private function onFocusOutTitle():void {
+				if(movieTitle.text == "")
+					movieTitle.text = "Movie title";
+			}
+			
+			// Clear field if information tag
+			private function onFocusInDescription():void {
+				if(movieDescription.text == "Write a description")
+					movieDescription.text = "";
+			}
+			
+			// Set information tag if field is empty
+			private function onFocusOutDescription():void {
+				if(movieDescription.text == "")
+					movieDescription.text = "Write a description";
+			}
+			
+			// Set movie information
+			private function setMovieInformation():void {
+				if(movieTitle.text == "" || movieTitle.text == "Movie title")
+					selectedMovie.title = "";
+				else
+					selectedMovie.title = movieTitle.text;
+					
+				if(movieDescription.text == "" || movieDescription.text == "Write a description")
+					selectedMovie.description = "";
+				else
+					selectedMovie.description = movieDescription.text;
+			}
+			          	
+		]]>
+	</mx:Script>
+	<mx:nativeDragEnter>
+    // Only allow files to be dragged in
+    if (event.clipboard.hasFormat(ClipboardFormats.FILE_LIST_FORMAT)) {
+        var files:Array = event.clipboard.getData(ClipboardFormats.FILE_LIST_FORMAT) as Array;
+        
+        // only allow a single file to be dragged in
+        if (files.length == 1) {
+            DragManager.acceptDragDrop(event.currentTarget as TitleWindow);
+            setStyle("backgroundColor", 0xccccff);
+        }
+    }
+    </mx:nativeDragEnter>
+	<mx:nativeDragDrop>
+	    // Event handler for when a dragged item is dropped on the WindowedApplication
+	    var arr:Array = event.clipboard.getData(ClipboardFormats.FILE_LIST_FORMAT) as Array;
+	    var tempFile:File = arr[0] as File;
+	    
+	    // Check file type
+	    switch(tempFile.extension){
+	    	// Check if image	    	
+            case "png" :
+            case "jpg" :
+            case "gif" :
+            	setCover(tempFile.url);
+            break;
+            
+            // Check if it is a movie
+            case "flv" :
+            	setSource(tempFile.url);
+            break;
+            
+            // Else show error
+            default:
+               Alert.show("This filetype is not supported!");
+        }
+        
+    	// Set background color again to normal
+    	setStyle("backgroundColor", 0xc0c0c0);
+    </mx:nativeDragDrop>
+    <mx:Binding source="selectedMovie.categoryList" destination="movieCategories.htmlText"/>
+    <mx:Binding source="selectedMovie.viewsString" destination="movieViews.text"/>
+	<mx:Box direction="horizontal">
+		<mx:Panel title="Cover">
+			<mx:Image source="{selectedMovie.cover}" id="cover" width="175" height="265" maintainAspectRatio="false" dragDrop="true" />
+		</mx:Panel>
+		<mx:Box direction="vertical">		
+			<mx:Panel title="Movie information">
+				<mx:TextInput id="movieTitle" text="{selectedMovie.title}" styleName="movieTitle" 
+					width="572" focusIn="onFocusInTitle();" focusOut="onFocusOutTitle();" 
+					change="setMovieInformation();" enter="focusManager.setFocus(movieDescription);"/>
+				<mx:Text id="movieCategories" link="goCategory(event)" styleName="movieCategories" width="572" />
+				<mx:TextArea id="movieDescription" text="{selectedMovie.description}" styleName="movieDescription" 
+					width="572" wordWrap="true" height="140" focusIn="onFocusInDescription();" focusOut="onFocusOutDescription();" 
+					change="setMovieInformation();" />
+				<mx:Text id="movieViews" styleName="movieViews" width="572" />
+				<mx:Text id="movieSource" text="Source: {selectedMovie.source}" styleName="movieSource" width="572" />			
+			</mx:Panel>
+			<mx:Box direction="horizontal">
+				<mx:Button label="Play" enabled="{!selectedMovie.source == ''}" click="playMovie();" />	
+				<mx:Button label="Manage categories" click="manageCategories();" />
+				<mx:Button label="Delete movie" click="removeMovie();" />
+				<mx:Button label="Random movie" click="dispatchEvent(new Event('randomMovie'));" />
+			</mx:Box>
+		</mx:Box>	
+	</mx:Box>
+	<mx:Box direction="horizontal">
+		<myComp:RolePanel direction="vertical" id="rolePanel" />	
+	</mx:Box>
+	<mx:Box direction="horizontal">
+		<myComp:WriterPanel direction="vertical" id="writerPanel" />
+		<myComp:DirectorPanel direction="vertical" id="directorPanel" />	
+	</mx:Box>
+</mx:TitleWindow>

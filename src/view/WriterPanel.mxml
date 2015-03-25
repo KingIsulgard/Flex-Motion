@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Box xmlns:mx="http://www.adobe.com/2006/mxml" xmlns:myComp="view.*">    
+	<mx:Script>
+		<![CDATA[
+			// Imports
+			import model.Writer;
+			import model.Movie;	
+			import model.Person;		
+			import mx.events.FlexEvent;
+			import mx.controls.Alert;
+			
+			// The movie
+			[Bindable] public var movie:Movie;
+			
+			// Set a boolean to keep track of the form state
+			[Bindable] private var formIsEmpty:Boolean = true;
+			
+			// Validate the form
+            private function validateForm(event:Event):void {                    
+				// Check input field
+				if(writerName.text == "" || writerName.text == "Writer name")
+					formIsEmpty = true;
+				else
+					formIsEmpty = false;
+            }
+			
+			private function addWriter():void {
+				if(writerName.text != "" && writerName.text != "Writer name") {
+					// Create a writer
+	                var tempPerson:Person = new Person(writerName.text);
+	                var tempWriter:Writer = new Writer(tempPerson);
+	                tempPerson.writer = tempWriter;
+	                
+	                // Add the writer if it isn't in the list yet
+					if(!movie.hasWriter(tempWriter)) {
+						tempWriter.addMovie(movie);
+						movie.addWriter(tempWriter);	
+					} else {
+						Alert.show("This movie already has a writer with that name!");
+					}
+					
+	                // Clear all input fields.
+	                writerName.text = "";
+	                onFocusOut();
+	                
+	                // Set form to empty again
+	                formIsEmpty = true;
+	                
+	                // Set the focus on the first field
+	                focusManager.setFocus(writerName);			
+	   			}	
+			}
+			
+			// Remove selected writers
+			private function removeWriters():void {
+				var selected:Array = writers.selectedItems;
+				for each(var writer:Writer in selected){
+					movie.removeWriter(writer);	
+				}				
+			}
+			
+			// Clear field if information tag
+			private function onFocusIn():void {
+				if(writerName.text == "Writer name")
+					writerName.text = "";
+			}
+			
+			// Set information tag if field is empty
+			private function onFocusOut():void {
+				if(writerName.text == "")
+					writerName.text = "Writer name";
+			}
+			
+		]]>
+	</mx:Script>
+	<mx:Panel title="Writers" layout="vertical">
+		<mx:DataGrid editable="true" dataProvider="{movie.writers}" id="writers" width="373" height="160" 
+			rowHeight="50" verticalAlign="middle" allowMultipleSelection="true">
+			<mx:columns>
+				<mx:DataGridColumn headerText="Photo" dataField="personPicture" width="50">
+					<mx:itemRenderer>
+						<mx:Component>
+							<mx:Box width="50" height="50" verticalAlign="middle" horizontalAlign="center">
+								<mx:Image source="{data.personPicture}" width="40" height="40" maintainAspectRatio="false" />
+							</mx:Box>					
+						</mx:Component>
+					</mx:itemRenderer>
+				</mx:DataGridColumn>				
+				<mx:DataGridColumn headerText="Writer name" dataField="writerName" />
+			</mx:columns>
+		</mx:DataGrid>
+		<mx:Box direction="horizontal">
+			<mx:TextInput id="writerName" text="Writer name" width="184" focusIn="onFocusIn();" 
+				focusOut="onFocusOut();" change="validateForm(event);" enter="addWriter();" />	
+			<mx:Button label="Add Writer" enabled="{!formIsEmpty}" click="addWriter();" width="100" />
+			<mx:Button label="Remove" click="removeWriters();" />
+		</mx:Box>
+	</mx:Panel>
+</mx:Box>
